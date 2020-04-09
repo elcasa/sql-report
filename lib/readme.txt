@@ -1,0 +1,1 @@
+Put here non-maven lib, if needed (e.g. Oracle jdbc database driver)

@@ -1,0 +1,38 @@
+#app
+datasource:
+  url: jdbc:hsqldb:mem:sampledb
+  username: SA
+  password:
+
+# TODO
+datasources:
+  sport-db:
+    url: jdbc:hsqldb:mem:sampledb
+    username: SA
+    password: KO
+    driver-class-name: org.hsqldb.jdbc.JDBCDriver
+    validation-query: SELECT 1 FROM (VALUES(0))
+    validation-query-timeout: 3
+    validation-interval: 15000
+    max-active: 10
+    max-idle: 10
+  history-db:
+    url: jdbc:hsqldb:mem:sampledb
+    username: SA
+    password:
+    driver-class-name: org.hsqldb.jdbc.JDBCDriver
+    validation-query: SELECT 1 FROM (VALUES(0))
+    validation-query-timeout: 3
+    validation-interval: 15000
+    max-active: 10
+    max-idle: 10
+  oracle-xe:
+    url: jdbc:oracle:thin:@localhost:1521/XEPDB1
+    username: SYSTEM
+    password: password
+    driver-class-name: oracle.jdbc.OracleDriver
+    validation-query: SELECT 1 FROM DUAL
+    validation-query-timeout: 3
+    validation-interval: 15000
+    max-active: 10
+    max-idle: 10

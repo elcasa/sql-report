@@ -1,0 +1,176 @@
+reports:
+  # Override launch-report-list from command line
+  launch-report-list: [pole-position,longest-governments,longest-governments2]
+  # Report definition
+  reports:
+    ########################
+    pole-position:
+      type: send-mail
+      datasource: sport-db
+      mail-body-query: |
+        SELECT DRIVERS, PERCENTAGE FROM (
+          SELECT 'Juan Manuel Fangio' as DRIVERS, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19'  as LAST_POLE FROM (VALUES(0)) UNION
+          SELECT 'Jim Clark', 45.21, 33, 73, DATE '1968-01-01' FROM (VALUES(0)) UNION
+          SELECT 'Alberto Ascari', 42.42, 14, 33, DATE '1954-10-24' FROM (VALUES(0)) UNION
+          SELECT 'Ayrton Senna', 40.12, 65, 162, DATE '1994-05-01' FROM (VALUES(0)) UNION
+          SELECT 'Lewis Hamilton', 36.21, 83, 232, DATE '2018-11-25' FROM (VALUES(0)) UNION
+          SELECT 'Sebastian Vettel', 24.66, 55, 223, DATE '2018-07-22' FROM (VALUES(0)) UNION
+          SELECT 'Stirling Moss', 23.88, 16, 67, DATE '1961-05-14' FROM (VALUES(0)) UNION
+          SELECT 'Michael Schumacher', 22.08, 68, 308, DATE '2006-07-16' FROM (VALUES(0))
+        )
+        ORDER BY PERCENTAGE DESC
+      attachment-query: |
+        SELECT * FROM (
+          SELECT 'Juan Manuel Fangio' as DRIVERS, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19' as LAST_POLE FROM (VALUES(0)) UNION
+          SELECT 'Jim Clark', 45.21, 33, 73, DATE '1968-01-01' FROM (VALUES(0)) UNION
+          SELECT 'Alberto Ascari', 42.42, 14, 33, DATE '1954-10-24' FROM (VALUES(0)) UNION
+          SELECT 'Ayrton Senna', 40.12, 65, 162, DATE '1994-05-01' FROM (VALUES(0)) UNION
+          SELECT 'Lewis Hamilton', 36.21, 83, 232, DATE '2018-11-25' FROM (VALUES(0)) UNION
+          SELECT 'Sebastian Vettel', 24.66, 55, 223, DATE '2018-07-22' FROM (VALUES(0)) UNION
+          SELECT 'Stirling Moss', 23.88, 16, 67, DATE '1961-05-14' FROM (VALUES(0)) UNION
+          SELECT 'Michael Schumacher', 22.08, 68, 308, DATE '2006-07-16' FROM (VALUES(0))
+        )
+        ORDER BY PERCENTAGE DESC
+      filename: f1
+      attachment-auto-filter: true
+      mail:
+        subject: Report – Top 8 F1 Poleman
+        heading: Here's the list of top F1 polemans
+        body: See the attachment for more details
+        table-caption: Caption
+        from:
+        to: elcasa.g@gmail.com
+        cc:
+        bcc:
+
+    ##########################
+    longest-governments:
+      type: create-report
+      datasource: history-db
+      mail-body-query: |
+        SELECT * FROM (
+          SELECT 'Republic of Venice' as STATE, 1100 as YEARS, '697' as FROM_YEAR, '1797' AS TO_YEAR FROM (VALUES(0)) UNION
+          SELECT 'Byzantine Empire',874,'330','1204' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of Scotland',859,'848','1707' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of France (absolute monarchy)',802,'987','1789' FROM (VALUES(0)) UNION
+          SELECT 'Khmer Empire',629,'802','1431' FROM (VALUES(0)) UNION
+          SELECT 'Ottoman Empire',624,'1299','1923' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of Joseon',505,'1392','1897' FROM (VALUES(0)) UNION
+          SELECT 'Roman Republic',482,'509','27 BCE' FROM (VALUES(0)) UNION
+          SELECT 'Ethiopian Empire (Solomonic Dynasty)',467,'1270','1737' FROM (VALUES(0)) UNION
+          SELECT 'Han Dynasty of China',426,'206 BCE','220 CE' FROM (VALUES(0))
+        )
+        ORDER BY YEARS DESC
+      attachment-query: |
+        SELECT * FROM (
+          SELECT 'Republic of Venice' as STATE, 1100 as YEARS, '697' as FROM_YEAR, '1797' AS TO_YEAR FROM (VALUES(0)) UNION
+          SELECT 'Byzantine Empire',874,'330','1204' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of Scotland',859,'848','1707' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of France (absolute monarchy)',802,'987','1789' FROM (VALUES(0)) UNION
+          SELECT 'Khmer Empire',629,'802','1431' FROM (VALUES(0)) UNION
+          SELECT 'Ottoman Empire',624,'1299','1923' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of Joseon',505,'1392','1897' FROM (VALUES(0)) UNION
+          SELECT 'Roman Republic',482,'509','27 BCE' FROM (VALUES(0)) UNION
+          SELECT 'Ethiopian Empire (Solomonic Dynasty)',467,'1270','1737' FROM (VALUES(0)) UNION
+          SELECT 'Han Dynasty of China',426,'206 BCE','220 CE' FROM (VALUES(0))
+        )
+        ORDER BY YEARS DESC
+      filename: longestUninterruptedFormsOfGovernments
+
+    ##########################
+    longest-governments2:
+      type: create-report
+      datasource: history-db
+      mail-body-query: |
+        SELECT * FROM (
+          SELECT 'Republic of Venice' as STATE, 1100 as YEARS, '697' as FROM_YEAR, '1797' AS TO_YEAR FROM (VALUES(0)) UNION
+          SELECT 'Byzantine Empire',874,'330','1204' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of Scotland',859,'848','1707' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of France (absolute monarchy)',802,'987','1789' FROM (VALUES(0)) UNION
+          SELECT 'Khmer Empire',629,'802','1431' FROM (VALUES(0)) UNION
+          SELECT 'Ottoman Empire',624,'1299','1923' FROM (VALUES(0)) UNION
+          SELECT 'Kingdom of Joseon',505,'1392','1897' FROM (VALUES(0)) UNION
+          SELECT 'Roman Republic',482,'509','27 BCE' FROM (VALUES(0)) UNION
+          SELECT 'Ethiopian Empire (Solomonic Dynasty)',467,'1270','1737' FROM (VALUES(0)) UNION
+          SELECT 'Han Dynasty of China',426,'206 BCE','220 CE' FROM (VALUES(0))
+        )
+        ORDER BY YEARS DESC
+      mail:
+        subject: Report – Longest uninterrupted forms of governments
+        heading: Here’s the list of the nine longest uninterrupted forms of governments
+        body: See the attachment for more details
+        table-caption: Caption
+
+########################################
+
+global:
+  formats:
+    date-format-attachment: dd-mm-yyyy
+    date-format-mail-body: dd-mm-yy
+    timestamp-format: yyyy-MM-dd_HHmmss
+    number-format:
+
+  temp-file-mail-body: true
+  path-log: log/
+  path-report: output/
+
+  mail:
+    # Use inline css style
+    template: |
+      <html>
+
+      <body>
+        <div style="FONT-FAMILY:Sans-serif;FONT-SIZE:11;">
+          <headingPlaceholder />
+          <br />
+          <dataTablePlaceholder />
+          <br />
+          <bodyPlaceholder />
+          <br />
+          <br /><span style="color:#00008B">sql-report</span>
+          <br />Automatic mail report
+          <br />
+        </div>
+      </body>
+
+      </html>
+
+    template-placeholders:
+      heading: <headingPlaceholder />
+      # replaced with mail-body-query content
+      table: <dataTablePlaceholder />
+      body: <bodyPlaceholder />
+
+    table-style:
+      # <table>
+      table: >-
+        cellpadding="5" style="FONT-FAMILY:Sans-serif;FONT-SIZE:11;border-collapse: collapse;"
+      # <caption>
+      caption: >-
+        style="font-weight: bold;"
+      # <th> table header column
+      table-header-column: >-
+        style="border: 1px solid; background-color: #C0C0C0"
+      # <td> table data column
+      table-data-column: >-
+        style="border: 1px solid"
+
+  mail-smtp:
+    username: email
+    password: password
+    properties:
+      mail:
+        smtp:
+          host: smtp.gmail.com
+          port: 587
+          auth: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+          # TLS , port 587
+          starttls:
+            enable: true
+          # SSL, port 465
+          #socketFactory:
+          #  port: 465
+          #  class: javax.net.ssl.SSLSocketFactory
