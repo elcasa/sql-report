@@ -57,6 +57,8 @@ command to run if program contains helper info
 ```
 
 ## TODO List
+* migliorare template mail html mail no reply ricevute
+    * fare anche un esempio con un immagine
 * grafici excel!!
     * parametri tipo grafico: bar-chart | line-chart
     * se crea grafico true : mettilo come primo worksheet
@@ -105,9 +107,16 @@ This project is licensed under the GNU Affero General Public License v3.0 Licens
 ## Acknowledgments
 
 Inspiration, code snippets, etc.
-* https://www.mkyong.com/java/javamail-api-sending-email-via-gmail-smtp-example/
-* https://www.mkyong.com/spring-boot/spring-boot-yaml-example/
-* https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
-* http://groovy-lang.org/databases.html#_fetching_metadata
-* https://howtodoinjava.com/library/readingwriting-excel-files-in-java-poi-tutorial
-* https://stackoverflow.com/questions/5794659/poi-how-do-i-set-cell-value-to-date-and-apply-default-excel-date-format
+* HTML Email: don't use _div_, use _table_
+    * Best Practices: https://stackoverflow.com/questions/2229822/best-practices-considerations-when-writing-html-emails/21437734#21437734 
+    * Visually test HTML Template: https://jsfiddle.net/
+    * Template sample: https://webdesign.tutsplus.com/it/articles/build-an-html-email-template-from-scratch--webdesign-12770
+    * Template sample 2: https://webdesign.tutsplus.com/articles/creating-a-simple-responsive-html-email--webdesign-12978
+* YAML
+    * https://www.mkyong.com/spring-boot/spring-boot-yaml-example/
+    * https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+* Spreadsheet generation
+    * https://howtodoinjava.com/library/readingwriting-excel-files-in-java-poi-tutorial
+    * https://stackoverflow.com/questions/5794659/poi-how-do-i-set-cell-value-to-date-and-apply-default-excel-date-format
+* Sending Emails: https://www.mkyong.com/java/javamail-api-sending-email-via-gmail-smtp-example/
+* DB Access: http://groovy-lang.org/databases.html#_fetching_metadata
