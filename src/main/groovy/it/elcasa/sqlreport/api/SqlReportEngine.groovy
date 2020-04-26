@@ -20,9 +20,30 @@ import org.apache.poi.ss.usermodel.Row
 import org.apache.poi.ss.usermodel.Sheet
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.util.CellRangeAddress
+import org.apache.poi.xddf.usermodel.PresetColor
+import org.apache.poi.xddf.usermodel.XDDFColor
+import org.apache.poi.xddf.usermodel.XDDFShapeProperties
+import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties
+import org.apache.poi.xddf.usermodel.chart.AxisCrosses
+import org.apache.poi.xddf.usermodel.chart.AxisPosition
+import org.apache.poi.xddf.usermodel.chart.BarDirection
+import org.apache.poi.xddf.usermodel.chart.ChartTypes
+import org.apache.poi.xddf.usermodel.chart.LegendPosition
+import org.apache.poi.xddf.usermodel.chart.XDDFBarChartData
+import org.apache.poi.xddf.usermodel.chart.XDDFCategoryAxis
+import org.apache.poi.xddf.usermodel.chart.XDDFChartData
+import org.apache.poi.xddf.usermodel.chart.XDDFChartLegend
+import org.apache.poi.xddf.usermodel.chart.XDDFDataSource
+import org.apache.poi.xddf.usermodel.chart.XDDFDataSourcesFactory
+import org.apache.poi.xddf.usermodel.chart.XDDFNumericalDataSource
+import org.apache.poi.xddf.usermodel.chart.XDDFValueAxis
 import org.apache.poi.xssf.streaming.SXSSFSheet
 import org.apache.poi.xssf.streaming.SXSSFWorkbook
+import org.apache.poi.xssf.usermodel.XSSFChart
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor
+import org.apache.poi.xssf.usermodel.XSSFDrawing
 import org.apache.poi.xssf.usermodel.XSSFFont
+import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.ApplicationArguments
 import org.springframework.stereotype.Component
@@ -41,8 +62,6 @@ import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 import javax.mail.util.ByteArrayDataSource
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-import java.nio.file.Path
 import java.sql.Connection
 import java.sql.DriverManager
 import java.text.SimpleDateFormat
@@ -130,11 +149,12 @@ class SqlReportEngine {
                 // Workbook checks
                 if(report.workbookConfig?.query) {
 
-                    // Chart Type
-                    // if the report has a chart, it will be created in NON-STREAMING mode
-                    if (report.workbookConfig?.isStreamingWorkbook == null) {
+                    if (report.workbookConfig.isStreamingWorkbook == null) {
                         report.workbookConfig.isStreamingWorkbook = true
                     }
+
+                    // Chart Type
+                    // if the report has a chart, it will be created in NON-STREAMING mode
                     if (report.workbookConfig.chartType) {
                         ReportChartTypeEnum chartEnum = ReportChartTypeEnum.retrieveType(report.workbookConfig.chartType)
                         if (!chartEnum) {
@@ -143,13 +163,13 @@ class SqlReportEngine {
                         }
                         report.workbookConfig.chartTypeEnum = chartEnum
                         report.workbookConfig.isStreamingWorkbook = false
-                        log.info "Report ${report.name}: Workbook containing Chart are created in NON-Streaming mode!"
+                        log.info "Report ${report.name}: Workbook containing Chart are created in NON-STREAMING mode!"
                     }
                     if (report.workbookConfig.query) {
                         if (report.workbookConfig.isStreamingWorkbook) {
-                            log.info "Report ${report.name}: Workbook will be created in Streaming mode (SXSSF), this allows to write very large files without running out of memory"
+                            log.info "Report ${report.name}: Workbook will be created in STREAMING mode (SXSSF), this allows to write very large files without running out of memory"
                         } else {
-                            log.warn "Report ${report.name}: Workbook will be created in NON-Streaming mode (XSSF)! This could cause out of memory with enormous Workbook"
+                            log.warn "Report ${report.name}: Workbook will be created in NON-STREAMING mode (XSSF)! This could cause out of memory with enormous Workbook"
                         }
                     }
                 }
@@ -233,7 +253,7 @@ class SqlReportEngine {
 
             Map<String, String> formats = [:]
             formats[WorkbookFactory.CELL_STYLE_DATE] =
-                    report.formats?.dateFormatAttachment ?: configGlobal.formats?.dateFormatAttachment ?: Constants.DEFAULT_FORMATS.dateFormatAttachment
+                    report.formats?.dateFormatWorkbook ?: configGlobal.formats?.dateFormatWorkbook ?: Constants.DEFAULT_FORMATS.dateFormatWorkbook
 
             WorkbookFactory workbookFactory = new WorkbookFactory(workbookConfig.isStreamingWorkbook, formats)
             wb = workbookFactory.workbook
@@ -283,6 +303,7 @@ class SqlReportEngine {
                                 case Number:
                                     cell.setCellValue(value as Double)
                                     cell.setCellStyle(workbookFactory.cellStyleNumberFloat)
+                                    break
                                 default:
                                     cell.setCellValue(value as String)
                                     cell.setCellStyle(workbookFactory.cellStyleString)
@@ -337,6 +358,80 @@ class SqlReportEngine {
             //sheet.addIgnoredErrors(
             //      new CellRangeAddress(sheet.getFirstRowNum() + 1, sheet.getLastRowNum(), 0, 0),
             //    IgnoredErrorType.NUMBER_STORED_AS_TEXT)
+
+            ////
+            // Workbook Chart
+            if (report.workbookConfig.chartTypeEnum){
+                XSSFSheet chartSheet = sheet as XSSFSheet
+
+                // Columns to show in chart
+                // TODO
+                int xAxisColumn = 0
+                int[] yAxisColumnList = [1,2]
+                int sheetLastRow =  sheet.getPhysicalNumberOfRows()
+
+                /*
+                XSSFSheet chartSheet = wb.createSheet("barchart") as XSSFSheet
+
+                final int NUM_OF_ROWS = 3;
+                final int NUM_OF_COLUMNS = 10;
+
+                // Create a row and put some cells in it. Rows are 0 based.
+                Row row;
+                Cell cell;
+                for (int rowIndex = 0; rowIndex < NUM_OF_ROWS; rowIndex++) {
+                    row = chartSheet.createRow((short) rowIndex);
+                    for (int colIndex = 0; colIndex < NUM_OF_COLUMNS; colIndex++) {
+                        cell = row.createCell((short) colIndex);
+                        cell.setCellValue((colIndex * (rowIndex + 1.0)) as int);
+                    }
+                }
+
+                */
+
+                XSSFDrawing drawing = chartSheet.createDrawingPatriarch();
+                XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 5, 10, 15);
+
+                XSSFChart chart = drawing.createChart(anchor);
+                chart.setTitleText("x = 2x and x = 3x");
+                chart.setTitleOverlay(false);
+                XDDFChartLegend legend = chart.getOrAddLegend();
+                legend.setPosition(LegendPosition.TOP_RIGHT);
+
+                // Use a category axis for the bottom axis.
+                XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+                bottomAxis.setTitle("x"); // https://stackoverflow.com/questions/32010765
+                XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+                leftAxis.setTitle("f(x)");
+                leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
+
+                XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                        new CellRangeAddress(1, sheetLastRow-1, 0, 0));
+                XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                        new CellRangeAddress(1, sheetLastRow-1, 1, 1));
+                XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                        new CellRangeAddress(1, sheetLastRow-1, 2, 2));
+
+                if(workbookConfig.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
+
+                    XDDFChartData data = chart.createData(ChartTypes.BAR, bottomAxis, leftAxis);
+                    XDDFChartData.Series series1 = data.addSeries(xs, ys1);
+                    series1.setTitle("2x", null); // https://stackoverflow.com/questions/21855842
+                    XDDFChartData.Series series2 = data.addSeries(xs, ys2);
+                    series2.setTitle("3x", null);
+                    chart.plot(data);
+
+                    // in order to transform a bar chart into a column chart, you just need to change the bar direction
+                    XDDFBarChartData bar = (XDDFBarChartData) data;
+                    bar.setBarDirection(BarDirection.COL);
+                    // looking for "Stacked Bar Chart"? uncomment the following line
+                    // bar.setBarGrouping(BarGrouping.STACKED);
+
+                    solidFillSeries(data, 0, PresetColor.CHARTREUSE);
+                    solidFillSeries(data, 1, PresetColor.TURQUOISE);
+                }
+
+            }
         }
 
         ////////////////////////
@@ -618,5 +713,16 @@ class SqlReportEngine {
 
         InternetAddress[] array = internetAddressList as InternetAddress[]
         return array
+    }
+
+    private static void solidFillSeries(XDDFChartData data, int index, PresetColor color) {
+        XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(color));
+        XDDFChartData.Series series = data.getSeries().get(index);
+        XDDFShapeProperties properties = series.getShapeProperties();
+        if (properties == null) {
+            properties = new XDDFShapeProperties();
+        }
+        properties.setFillProperties(fill);
+        series.setShapeProperties(properties);
     }
 }

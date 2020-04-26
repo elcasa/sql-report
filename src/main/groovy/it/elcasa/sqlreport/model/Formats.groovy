@@ -1,7 +1,7 @@
 package it.elcasa.sqlreport.model
 
 class Formats {
-    String dateFormatAttachment
+    String dateFormatWorkbook
     String dateFormatMailBody
     String timestampFormat
     String numberFormat

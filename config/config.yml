@@ -1,6 +1,9 @@
 reports:
   # TODO Override launch-report-list from command line
-  launch-report-list: [pole-position, longest-governments, longest-governments2]
+  launch-report-list: [#pole-position,
+                       #longest-governments,
+                       #longest-governments2,
+                       pole-position-chart]
   # Report definition
   reports:
     ########################
@@ -10,7 +13,7 @@ reports:
       workbook-config:
         query: |
           SELECT * FROM (
-            SELECT 'Juan Manuel Fangio' as DRIVERS, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19' as LAST_POLE FROM (VALUES(0)) UNION
+            SELECT 'Juan Manuel Fangio' as DRIVER, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19' as LAST_POLE FROM (VALUES(0)) UNION
             SELECT 'Jim Clark', 45.21, 33, 73, DATE '1968-01-01' FROM (VALUES(0)) UNION
             SELECT 'Alberto Ascari', 42.42, 14, 33, DATE '1954-10-24' FROM (VALUES(0)) UNION
             SELECT 'Ayrton Senna', 40.12, 65, 162, DATE '1994-05-01' FROM (VALUES(0)) UNION
@@ -27,8 +30,8 @@ reports:
         heading: Here's the list of top F1 polemans
         table-caption: Caption
         table-query: |
-          SELECT DRIVERS, PERCENTAGE FROM (
-            SELECT 'Juan Manuel Fangio' as DRIVERS, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19' as LAST_POLE FROM (VALUES(0)) UNION
+          SELECT DRIVER, PERCENTAGE FROM (
+            SELECT 'Juan Manuel Fangio' as DRIVER, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19' as LAST_POLE FROM (VALUES(0)) UNION
             SELECT 'Jim Clark', 45.21, 33, 73, DATE '1968-01-01' FROM (VALUES(0)) UNION
             SELECT 'Alberto Ascari', 42.42, 14, 33, DATE '1954-10-24' FROM (VALUES(0)) UNION
             SELECT 'Ayrton Senna', 40.12, 65, 162, DATE '1994-05-01' FROM (VALUES(0)) UNION
@@ -38,6 +41,35 @@ reports:
             SELECT 'Michael Schumacher', 22.08, 68, 308, DATE '2006-07-16' FROM (VALUES(0))
           )
           ORDER BY PERCENTAGE DESC
+        body: See the attachment for more details
+
+        from:
+        to: test@email.it
+        cc:
+        bcc:
+    ########################
+    pole-position-chart:
+      type: create-report
+      datasource: sport-db
+      workbook-config:
+        query: |
+          SELECT * FROM (
+            SELECT 'Juan Manuel Fangio' as DRIVER, 55.77 as PERCENTAGE, 29 as POLES, 52 as ENTRIES, DATE '1958-01-19' as LAST_POLE FROM (VALUES(0)) UNION
+            SELECT 'Jim Clark', 45.21, 33, 73, DATE '1968-01-01' FROM (VALUES(0)) UNION
+            SELECT 'Alberto Ascari', 42.42, 14, 33, DATE '1954-10-24' FROM (VALUES(0)) UNION
+            SELECT 'Ayrton Senna', 40.12, 65, 162, DATE '1994-05-01' FROM (VALUES(0)) UNION
+            SELECT 'Lewis Hamilton', 36.21, 83, 232, DATE '2018-11-25' FROM (VALUES(0)) UNION
+            SELECT 'Sebastian Vettel', 24.66, 55, 223, DATE '2018-07-22' FROM (VALUES(0)) UNION
+            SELECT 'Stirling Moss', 23.88, 16, 67, DATE '1961-05-14' FROM (VALUES(0)) UNION
+            SELECT 'Michael Schumacher', 22.08, 68, 308, DATE '2006-07-16' FROM (VALUES(0))
+          )
+          ORDER BY PERCENTAGE DESC
+        filename: pole-chart
+        auto-filter: true
+        chartType: bar-chart
+      mail:
+        subject: Report – Top 8 F1 Poleman
+        heading: Here's the list of top F1 polemans
         body: See the attachment for more details
 
         from:

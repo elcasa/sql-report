@@ -49,12 +49,12 @@ class WorkbookFactory {
         cellStylesMap.put(CELL_STYLE_STRING, cellStyle)
 
         cellStyle = wb.createCellStyle()
-        cellStyle.setDataFormat(dataFormat.getFormat("0"))
+        cellStyle.setDataFormat(dataFormat.getFormat('0.0'))
         cellStylesMap.put(CELL_STYLE_NUMBER_FLOAT, cellStyle)
 
         cellStyle = wb.createCellStyle()
         cellStyle.setDataFormat(dataFormat.getFormat(
-                formats[CELL_STYLE_DATE] ?: Constants.DEFAULT_DATE_FORMAT))
+                formats[CELL_STYLE_DATE] ?: Constants.DEFAULT_FORMATS.dateFormatWorkbook))
         cellStylesMap.put(CELL_STYLE_DATE, cellStyle)
     }
 

@@ -54,7 +54,7 @@ public class BarChart {
 
     public static void main(String[] args) throws IOException {
         XSSFWorkbook wb = new XSSFWorkbook()
-        XSSFSheet sheet = wb.createSheet("barchart");
+        XSSFSheet chartSheet = wb.createSheet("barchart");
         final int NUM_OF_ROWS = 3;
         final int NUM_OF_COLUMNS = 10;
 
@@ -62,14 +62,14 @@ public class BarChart {
         Row row;
         Cell cell;
         for (int rowIndex = 0; rowIndex < NUM_OF_ROWS; rowIndex++) {
-            row = sheet.createRow((short) rowIndex);
+            row = chartSheet.createRow((short) rowIndex);
             for (int colIndex = 0; colIndex < NUM_OF_COLUMNS; colIndex++) {
                 cell = row.createCell((short) colIndex);
                 cell.setCellValue(colIndex * (rowIndex + 1.0));
             }
         }
 
-        XSSFDrawing drawing = sheet.createDrawingPatriarch();
+        XSSFDrawing drawing = chartSheet.createDrawingPatriarch();
         XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 5, 10, 15);
 
         XSSFChart chart = drawing.createChart(anchor);
@@ -85,9 +85,9 @@ public class BarChart {
         leftAxis.setTitle("f(x)");
         leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
-        XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(0, 0, 0, NUM_OF_COLUMNS - 1));
-        XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(1, 1, 0, NUM_OF_COLUMNS - 1));
-        XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(2, 2, 0, NUM_OF_COLUMNS - 1));
+        XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet, new CellRangeAddress(0, 0, 0, NUM_OF_COLUMNS - 1));
+        XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet, new CellRangeAddress(1, 1, 0, NUM_OF_COLUMNS - 1));
+        XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet, new CellRangeAddress(2, 2, 0, NUM_OF_COLUMNS - 1));
 
         XDDFChartData data = chart.createData(ChartTypes.BAR, bottomAxis, leftAxis);
         XDDFChartData.Series series1 = data.addSeries(xs, ys1);

@@ -10,10 +10,10 @@ class Constants {
     static final String DEFAULT_REPORT_OUTPUT_PATH = 'output'
 
     static final Formats DEFAULT_FORMATS = new Formats([
-            dateFormatAttachment : 'yyyy-mm-dd',
-            dateFormatMailBody   : 'yyyy-mm-dd',
-            timestampFormat      : 'yyyyMMdd_HHmmss',
-        ])
+            dateFormatWorkbook  : 'yyyy-mm-dd',
+            dateFormatMailBody  : 'yyyy-mm-dd',
+            timestampFormat     : 'yyyyMMdd_HHmmss',
+    ])
 
     // SXSSFWorkbook settings
     static final int DEFAULT_ROW_ACCESS_WINDOW_SIZE = 100
