@@ -1,6 +1,6 @@
 package it.elcasa.sqlreport.model
 
-class WorkbookConfig {
+class ConfigWorkbook {
     String query
     String filename
 
@@ -8,8 +8,5 @@ class WorkbookConfig {
     Boolean autoFilter
     Boolean lockFirstRow
 
-    String chartType
-    ReportChartTypeEnum chartTypeEnum
-    // TODO ChartColumns
-
+    ConfigWorkbookChart chart
 }

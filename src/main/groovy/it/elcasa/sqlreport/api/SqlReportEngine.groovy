@@ -6,6 +6,7 @@ import groovy.util.logging.Slf4j
 import it.elcasa.sqlreport.model.ConfigDataSources
 import it.elcasa.sqlreport.model.ConfigGlobal
 import it.elcasa.sqlreport.model.ConfigReports
+import it.elcasa.sqlreport.model.ConfigWorkbookChart
 import it.elcasa.sqlreport.model.Report
 import it.elcasa.sqlreport.model.ReportChartTypeEnum
 import it.elcasa.sqlreport.model.ReportTypeEnum
@@ -27,6 +28,7 @@ import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties
 import org.apache.poi.xddf.usermodel.chart.AxisCrosses
 import org.apache.poi.xddf.usermodel.chart.AxisPosition
 import org.apache.poi.xddf.usermodel.chart.BarDirection
+import org.apache.poi.xddf.usermodel.chart.BarGrouping
 import org.apache.poi.xddf.usermodel.chart.ChartTypes
 import org.apache.poi.xddf.usermodel.chart.LegendPosition
 import org.apache.poi.xddf.usermodel.chart.XDDFBarChartData
@@ -131,13 +133,13 @@ class SqlReportEngine {
 
                 if(!report.workbookConfig?.query && !report.mail?.tableQuery){
                     throw new SqlReportException(logHeader +
-                            "Report requires attachmentQuery or mailBodyQuery")
+                            "report requires workbookConfig.query or mail.tableQuery")
                 }
 
                 if(report.typeEnum == ReportTypeEnum.SEND_MAIL){
                     if(!report.mail?.to && !report.mail?.cc && !report.mail?.bcc){
                         throw new SqlReportException(logHeader +
-                                "Report type ${ReportTypeEnum.SEND_MAIL} require a mail recipient")
+                                "report type ${ReportTypeEnum.SEND_MAIL} require a mail recipient")
                     }
                 }
 
@@ -155,23 +157,28 @@ class SqlReportEngine {
 
                     // Chart Type
                     // if the report has a chart, it will be created in NON-STREAMING mode
-                    if (report.workbookConfig.chartType) {
-                        ReportChartTypeEnum chartEnum = ReportChartTypeEnum.retrieveType(report.workbookConfig.chartType)
+                    if (report.workbookConfig.chart?.chartType) {
+                        ReportChartTypeEnum chartEnum = ReportChartTypeEnum.retrieveType(report.workbookConfig.chart.chartType)
                         if (!chartEnum) {
                             throw new SqlReportException(logHeader +
-                                    "chart type not recognized. Allowed chart types are ${ReportChartTypeEnum.values()}")
+                                    "chart.chartType not recognized. Allowed chart types are ${ReportChartTypeEnum.values()}")
                         }
-                        report.workbookConfig.chartTypeEnum = chartEnum
+                        report.workbookConfig.chart.chartTypeEnum = chartEnum
                         report.workbookConfig.isStreamingWorkbook = false
                         log.info "Report ${report.name}: Workbook containing Chart are created in NON-STREAMING mode!"
-                    }
-                    if (report.workbookConfig.query) {
-                        if (report.workbookConfig.isStreamingWorkbook) {
-                            log.info "Report ${report.name}: Workbook will be created in STREAMING mode (SXSSF), this allows to write very large files without running out of memory"
-                        } else {
-                            log.warn "Report ${report.name}: Workbook will be created in NON-STREAMING mode (XSSF)! This could cause out of memory with enormous Workbook"
+
+                        if(report.workbookConfig.chart.xAxisColumn == null || !report.workbookConfig.chart.yAxisColumns){
+                            throw new SqlReportException(logHeader +
+                                    "chart.xAxisColumn and chart.yAxisColumns must be defined to create a chart")
                         }
                     }
+
+                    if (report.workbookConfig.isStreamingWorkbook) {
+                        log.info "Report ${report.name}: Workbook will be created in STREAMING mode (SXSSF), this allows to write very large files without running out of memory"
+                    } else {
+                        log.warn "Report ${report.name}: Workbook will be created in NON-STREAMING mode (XSSF)! This could cause out of memory with enormous Workbook"
+                    }
+
                 }
 
             }
@@ -245,6 +252,9 @@ class SqlReportEngine {
          // "org.hsqldb.jdbc.JDBCDriver"
         def sql = new Sql(sampleDbConn)
 
+        boolean tableDataHasData = false
+        boolean workbookHasData = false
+
         ////////////////////////
         // Create Workbook
         Workbook wb = null
@@ -284,6 +294,10 @@ class SqlReportEngine {
                         }
                     },
                     { row ->
+                        if(!workbookHasData){
+                            workbookHasData = true
+                        }
+
                         // Query row: set values in report
                         Row reportRow = sheet.createRow(sheet.lastRowNum + 1)
                         (0..queryColumnCount - 1).each { index ->
@@ -361,14 +375,15 @@ class SqlReportEngine {
 
             ////
             // Workbook Chart
-            if (report.workbookConfig.chartTypeEnum){
+            if (report.workbookConfig.chart?.chartTypeEnum){
+                ConfigWorkbookChart chartConfig = workbookConfig.chart
                 XSSFSheet chartSheet = sheet as XSSFSheet
 
                 // Columns to show in chart
                 // TODO
                 int xAxisColumn = 0
                 int[] yAxisColumnList = [1,2]
-                int sheetLastRow =  sheet.getPhysicalNumberOfRows()
+                int sheetLastRow = sheet.getPhysicalNumberOfRows()
 
                 /*
                 XSSFSheet chartSheet = wb.createSheet("barchart") as XSSFSheet
@@ -389,12 +404,42 @@ class SqlReportEngine {
 
                 */
 
+                // TODO graph size
+                // https://stackoverflow.com/questions/12939375/how-to-resize-a-chart-using-xssf-apache-poi-3-8
+                /*
+
+                //Call the partiarch to start drawing
+                XSSFDrawing drawing = ((XSSFSheet)currentSheet).createDrawingPatriarch();
+                //Create CTMarket for anchor
+                CTMarker chartEndCoords = CTMarker.Factory.newInstance();
+                //The coordinates are set in columns and rows, not pixels.
+                chartEndCoords.setCol(column);
+                //Set Column offset
+                chartEndCoords.setColOff(0);
+                chartEndCoords.setRow(row);
+                chartEndCoords.setRowOff(0);
+                //drawing.getCTDrawing().getTwoCellAnchorArray(0).setFrom(chartStartCoords);
+                drawing.getCTDrawing().getTwoCellAnchorArray(0).setTo(chartEndCoords);
+
+                /*
+                    This line of code allows to resize the chart:
+                        The Patriarch is what allows to get control over the drawings, since
+                        a chart is considered a graph in xlsx you can access it with getCTDrawing.
+                        Each graph is stored in the tag getTwoCellAnchorArray, where the array position
+                        is the chart you have; for example getTwoCellAnchorArray(3) would refer to the
+                        forth graph within the sheet.
+
+                        Each getTwoCellAnchorArray has several properties as FROM and TO, which define
+                        where the existing graph starts and ends.
+                */
+
                 XSSFDrawing drawing = chartSheet.createDrawingPatriarch();
                 XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 5, 10, 15);
 
                 XSSFChart chart = drawing.createChart(anchor);
-                chart.setTitleText("x = 2x and x = 3x");
+                chart.setTitleText(chartConfig.titleText);
                 chart.setTitleOverlay(false);
+
                 XDDFChartLegend legend = chart.getOrAddLegend();
                 legend.setPosition(LegendPosition.TOP_RIGHT);
 
@@ -405,30 +450,40 @@ class SqlReportEngine {
                 leftAxis.setTitle("f(x)");
                 leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
-                XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                        new CellRangeAddress(1, sheetLastRow-1, 0, 0));
-                XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                        new CellRangeAddress(1, sheetLastRow-1, 1, 1));
-                XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                        new CellRangeAddress(1, sheetLastRow-1, 2, 2));
+                XDDFDataSource xs = null
+                if(workbookConfig.chart.xAxisNumerical){
+                    // TODO define as XDDFDataSource<Double> ??
+                    xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                            new CellRangeAddress(1, sheetLastRow-1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
+                } else {
+                    xs = XDDFDataSourcesFactory.fromStringCellRange(chartSheet,
+                            new CellRangeAddress(1, sheetLastRow-1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
+                }
 
-                if(workbookConfig.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
+                if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
 
                     XDDFChartData data = chart.createData(ChartTypes.BAR, bottomAxis, leftAxis);
-                    XDDFChartData.Series series1 = data.addSeries(xs, ys1);
-                    series1.setTitle("2x", null); // https://stackoverflow.com/questions/21855842
-                    XDDFChartData.Series series2 = data.addSeries(xs, ys2);
-                    series2.setTitle("3x", null);
+
+                    chartConfig.yAxisColumns.each { it ->
+                        XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                                new CellRangeAddress(1, sheetLastRow-1, it, it));
+
+                        XDDFChartData.Series series1 = data.addSeries(xs, ys);
+                        series1.setTitle("2x", null); // https://stackoverflow.com/questions/21855842
+                    }
+
                     chart.plot(data);
 
                     // in order to transform a bar chart into a column chart, you just need to change the bar direction
                     XDDFBarChartData bar = (XDDFBarChartData) data;
-                    bar.setBarDirection(BarDirection.COL);
+                    bar.setBarDirection(BarDirection.BAR);
+                    // reverse axis
+                    //bar.setBarDirection(BarDirection.COL);
                     // looking for "Stacked Bar Chart"? uncomment the following line
-                    // bar.setBarGrouping(BarGrouping.STACKED);
+                    //bar.setBarGrouping(BarGrouping.STACKED);
 
-                    solidFillSeries(data, 0, PresetColor.CHARTREUSE);
-                    solidFillSeries(data, 1, PresetColor.TURQUOISE);
+//                    solidFillSeries(data, 0, PresetColor.CHARTREUSE);
+//                    solidFillSeries(data, 1, PresetColor.TURQUOISE);
                 }
 
             }
@@ -548,6 +603,10 @@ class SqlReportEngine {
 
                     })
 
+                if(tableData){
+                    tableDataHasData = true
+                }
+
                 log.info "Report ${report.name}: mailBodyQuery DONE"
 
                 htmlDataTable = """\
@@ -591,10 +650,11 @@ class SqlReportEngine {
         String mailBodyFilename = baseFileName + timestamp + Constants.REPORT_MAILBODY_FILENAME_EXTENSION
         String reportAttachmentName = baseFileName + timestamp + Constants.REPORT_ATTACHMENT_FILENAME_EXTENSION
 
+        if(!tableDataHasData && !workbookHasData){
+            throw new SqlReportException("No data found! Check queries or report configuration")
+        }
+
         if(report.typeEnum == ReportTypeEnum.CREATE_REPORT){
-            if(!mailBody && !wb){
-                throw new SqlReportException("There's nothing to create!")
-            }
             String outputPath = configGlobal.pathReport ?: Constants.DEFAULT_REPORT_OUTPUT_PATH
 
             // Create directory
@@ -715,14 +775,4 @@ class SqlReportEngine {
         return array
     }
 
-    private static void solidFillSeries(XDDFChartData data, int index, PresetColor color) {
-        XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(color));
-        XDDFChartData.Series series = data.getSeries().get(index);
-        XDDFShapeProperties properties = series.getShapeProperties();
-        if (properties == null) {
-            properties = new XDDFShapeProperties();
-        }
-        properties.setFillProperties(fill);
-        series.setShapeProperties(properties);
-    }
 }

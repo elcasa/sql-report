@@ -5,7 +5,7 @@ class Report {
     String type
     ReportTypeEnum typeEnum
     String datasource
-    WorkbookConfig workbookConfig
+    ConfigWorkbook workbookConfig
     Mail mail
     Formats formats
     //TODO

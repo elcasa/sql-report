@@ -66,7 +66,12 @@ reports:
           ORDER BY PERCENTAGE DESC
         filename: pole-chart
         auto-filter: true
-        chartType: bar-chart
+        chart:
+            chart-type: bar-chart
+            title-text: Top 8 poleman
+            x-axis-column: 0
+            x-axis-numerical: false
+            y-axis-columns: [1,2]
       mail:
         subject: Report – Top 8 F1 Poleman
         heading: Here's the list of top F1 polemans

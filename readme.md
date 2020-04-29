@@ -60,11 +60,11 @@ command to run if program contains helper info
 * migliorare template mail html mail no reply ricevute
     * fare anche un esempio con un immagine
 * grafici excel!!
-    * parametri tipo grafico: bar-chart | line-chart
-    * se crea grafico true : mettilo come primo worksheet
-    * parametro con colonne da considerare
-    * xddf poi 4
-* converti fine riga in lf
+    * sistema dimensione chart
+    * vengono tagliate la prima e l'ultima barra
+    * crea line-chart
+    * recupera nome colonna da prima riga
+* converti fine riga in lf?
 * loggare su file
 * ultimare readme .md
     * intro su yml config
@@ -108,9 +108,10 @@ This project is licensed under the GNU Affero General Public License v3.0 Licens
 
 Inspiration, code snippets, etc.
 * HTML Email: don't use _div_, use _table_
+    * Basic Template: https://github.com/leemunroe/responsive-html-email-template
     * Best Practices: https://stackoverflow.com/questions/2229822/best-practices-considerations-when-writing-html-emails/21437734#21437734 
     * Visually test HTML Template: https://jsfiddle.net/
-    * Template sample: https://webdesign.tutsplus.com/it/articles/build-an-html-email-template-from-scratch--webdesign-12770
+    * Template sample: https://webdesign.tutsplus.com/articles/build-an-html-email-template-from-scratch--webdesign-12770
     * Template sample 2: https://webdesign.tutsplus.com/articles/creating-a-simple-responsive-html-email--webdesign-12978
 * YAML
     * https://www.mkyong.com/spring-boot/spring-boot-yaml-example/
