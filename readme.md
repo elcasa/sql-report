@@ -63,7 +63,7 @@ command to run if program contains helper info
     * sistema dimensione chart
     * vengono tagliate la prima e l'ultima barra
     * crea line-chart
-    * recupera nome colonna da prima riga
+* file CSV con openCSV
 * converti fine riga in lf?
 * loggare su file
 * ultimare readme .md

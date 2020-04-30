@@ -15,6 +15,7 @@ import it.elcasa.sqlreport.model.TemplatePlaceholders
 import org.apache.commons.text.StringEscapeUtils
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellStyle
+import org.apache.poi.ss.usermodel.ClientAnchor
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.IndexedColors
 import org.apache.poi.ss.usermodel.Row
@@ -45,7 +46,10 @@ import org.apache.poi.xssf.usermodel.XSSFChart
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor
 import org.apache.poi.xssf.usermodel.XSSFDrawing
 import org.apache.poi.xssf.usermodel.XSSFFont
+import org.apache.poi.xssf.usermodel.XSSFRow
 import org.apache.poi.xssf.usermodel.XSSFSheet
+import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTMarker
+import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTTwoCellAnchor
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.ApplicationArguments
 import org.springframework.stereotype.Component
@@ -121,24 +125,25 @@ class SqlReportEngine {
                             "report name is mandatory. Be sure that all reports have a name set in configuration")
                 }
 
-                String logHeader = "${CONFIGURATION_ERROR}Report ${report.name} of Report type ${report.type}: "
+                String logHead ="[Report ${report.name}] "
+                String logHeadConfigKo = "${logHead} of Report type ${report.type}: ${CONFIGURATION_ERROR} "
 
                 // Report Type
                 ReportTypeEnum typeEnum = ReportTypeEnum.retrieveType(report.type)
                 if(!typeEnum){
-                    throw new SqlReportException(logHeader +
+                    throw new SqlReportException(logHeadConfigKo +
                             "type not recognized. Allowed report types are ${ReportTypeEnum.values()}")
                 }
                 report.typeEnum = typeEnum
 
                 if(!report.workbookConfig?.query && !report.mail?.tableQuery){
-                    throw new SqlReportException(logHeader +
+                    throw new SqlReportException(logHeadConfigKo +
                             "report requires workbookConfig.query or mail.tableQuery")
                 }
 
                 if(report.typeEnum == ReportTypeEnum.SEND_MAIL){
                     if(!report.mail?.to && !report.mail?.cc && !report.mail?.bcc){
-                        throw new SqlReportException(logHeader +
+                        throw new SqlReportException(logHeadConfigKo +
                                 "report type ${ReportTypeEnum.SEND_MAIL} require a mail recipient")
                     }
                 }
@@ -151,34 +156,39 @@ class SqlReportEngine {
                 // Workbook checks
                 if(report.workbookConfig?.query) {
 
-                    if (report.workbookConfig.isStreamingWorkbook == null) {
-                        report.workbookConfig.isStreamingWorkbook = true
-                    }
-
-                    // Chart Type
-                    // if the report has a chart, it will be created in NON-STREAMING mode
-                    if (report.workbookConfig.chart?.chartType) {
-                        ReportChartTypeEnum chartEnum = ReportChartTypeEnum.retrieveType(report.workbookConfig.chart.chartType)
-                        if (!chartEnum) {
-                            throw new SqlReportException(logHeader +
-                                    "chart.chartType not recognized. Allowed chart types are ${ReportChartTypeEnum.values()}")
-                        }
-                        report.workbookConfig.chart.chartTypeEnum = chartEnum
-                        report.workbookConfig.isStreamingWorkbook = false
-                        log.info "Report ${report.name}: Workbook containing Chart are created in NON-STREAMING mode!"
-
-                        if(report.workbookConfig.chart.xAxisColumn == null || !report.workbookConfig.chart.yAxisColumns){
-                            throw new SqlReportException(logHeader +
-                                    "chart.xAxisColumn and chart.yAxisColumns must be defined to create a chart")
-                        }
-                    }
-
-                    if (report.workbookConfig.isStreamingWorkbook) {
-                        log.info "Report ${report.name}: Workbook will be created in STREAMING mode (SXSSF), this allows to write very large files without running out of memory"
+                    if (report.workbookConfig.csvFile){
+                        // TODO
+                        log.info "${logHead} report will be a simple CSV, no Workbook will be created"
                     } else {
-                        log.warn "Report ${report.name}: Workbook will be created in NON-STREAMING mode (XSSF)! This could cause out of memory with enormous Workbook"
-                    }
 
+                        if (report.workbookConfig.isStreamingWorkbook == null) {
+                            report.workbookConfig.isStreamingWorkbook = true
+                        }
+
+                        // Chart Type
+                        // if the report has a chart, it will be created in NON-STREAMING mode
+                        if (report.workbookConfig.chart?.chartType) {
+                            ReportChartTypeEnum chartEnum = ReportChartTypeEnum.retrieveType(report.workbookConfig.chart.chartType)
+                            if (!chartEnum) {
+                                throw new SqlReportException(logHeadConfigKo +
+                                        "chart.chartType not recognized. Allowed chart types are ${ReportChartTypeEnum.values()}")
+                            }
+                            report.workbookConfig.chart.chartTypeEnum = chartEnum
+                            report.workbookConfig.isStreamingWorkbook = false
+                            log.info "${logHead} Workbook containing Chart are created in NON-STREAMING mode!"
+
+                            if (report.workbookConfig.chart.xAxisColumn == null || !report.workbookConfig.chart.yAxisColumns) {
+                                throw new SqlReportException(logHeadConfigKo +
+                                        "chart.xAxisColumn and chart.yAxisColumns must be defined to create a chart")
+                            }
+                        }
+
+                        if (report.workbookConfig.isStreamingWorkbook) {
+                            log.info "${logHead} Workbook will be created in STREAMING mode (SXSSF), this allows to write very large files without running out of memory"
+                        } else {
+                            log.warn "${logHead} Workbook will be created in NON-STREAMING mode (XSSF)! This could cause out of memory with enormous Workbook"
+                        }
+                    }
                 }
 
             }
@@ -200,7 +210,7 @@ class SqlReportEngine {
                     launchReport(report)
                 }
                 catch (SqlReportException sre){
-                    log.error("Report '$reportName' of type '$report.type': $sre.message")
+                    log.error("[Report ${report.name}] of type '$report.type': $sre.message")
                 }
             } else {
                 log.error "${reportName} not found in reports configuration"
@@ -236,8 +246,10 @@ class SqlReportEngine {
     }
 
     private void launchReport(Report report){
+        String logHead = "[Report ${report.name}] "
+
         log.info "########"
-        log.info "Start report ${report.name}"
+        log.info "${logHead}Start"
 
         // TODO get Hikari Spring boot DS
         Connection sampleDbConn = DriverManager.getConnection(
@@ -326,7 +338,7 @@ class SqlReportEngine {
                         }
             })
 
-            log.info "Report ${report.name}: attachmentQuery DONE"
+            log.info "${logHead} workbookConfig.query DONE"
 
             ////////
             // Style
@@ -375,9 +387,10 @@ class SqlReportEngine {
 
             ////
             // Workbook Chart
-            if (report.workbookConfig.chart?.chartTypeEnum){
+            if (report.workbookConfig.chart?.chartTypeEnum) {
                 ConfigWorkbookChart chartConfig = workbookConfig.chart
                 XSSFSheet chartSheet = sheet as XSSFSheet
+                def firstRow = chartSheet.getRow(0)
 
                 // Columns to show in chart
                 // TODO
@@ -407,19 +420,20 @@ class SqlReportEngine {
                 // TODO graph size
                 // https://stackoverflow.com/questions/12939375/how-to-resize-a-chart-using-xssf-apache-poi-3-8
                 /*
-
                 //Call the partiarch to start drawing
-                XSSFDrawing drawing = ((XSSFSheet)currentSheet).createDrawingPatriarch();
+                XSSFDrawing drawing = chartSheet.createDrawingPatriarch();
                 //Create CTMarket for anchor
                 CTMarker chartEndCoords = CTMarker.Factory.newInstance();
                 //The coordinates are set in columns and rows, not pixels.
-                chartEndCoords.setCol(column);
+                chartEndCoords.setCol(2);
                 //Set Column offset
                 chartEndCoords.setColOff(0);
-                chartEndCoords.setRow(row);
+                chartEndCoords.setRow(2);
                 chartEndCoords.setRowOff(0);
+
+                def firstAnchor = drawing.getCTDrawing().getTwoCellAnchorArray(0)
+                firstAnchor.setTo(chartEndCoords);
                 //drawing.getCTDrawing().getTwoCellAnchorArray(0).setFrom(chartStartCoords);
-                drawing.getCTDrawing().getTwoCellAnchorArray(0).setTo(chartEndCoords);
 
                 /*
                     This line of code allows to resize the chart:
@@ -435,6 +449,8 @@ class SqlReportEngine {
 
                 XSSFDrawing drawing = chartSheet.createDrawingPatriarch();
                 XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 5, 10, 15);
+                // TODO ... plot area too small, and drawing area too
+                anchor.anchorType = ClientAnchor.AnchorType.MOVE_DONT_RESIZE
 
                 XSSFChart chart = drawing.createChart(anchor);
                 chart.setTitleText(chartConfig.titleText);
@@ -445,14 +461,13 @@ class SqlReportEngine {
 
                 // Use a category axis for the bottom axis.
                 XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
-                bottomAxis.setTitle("x"); // https://stackoverflow.com/questions/32010765
+                bottomAxis.setTitle(firstRow.getCell(chartConfig.xAxisColumn).getStringCellValue()); // https://stackoverflow.com/questions/32010765
                 XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
                 leftAxis.setTitle("f(x)");
                 leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
-                XDDFDataSource xs = null
+                XDDFDataSource<?> xs = null
                 if(workbookConfig.chart.xAxisNumerical){
-                    // TODO define as XDDFDataSource<Double> ??
                     xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
                             new CellRangeAddress(1, sheetLastRow-1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
                 } else {
@@ -464,12 +479,12 @@ class SqlReportEngine {
 
                     XDDFChartData data = chart.createData(ChartTypes.BAR, bottomAxis, leftAxis);
 
-                    chartConfig.yAxisColumns.each { it ->
+                    chartConfig.yAxisColumns.each { yColumn ->
                         XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                                new CellRangeAddress(1, sheetLastRow-1, it, it));
+                                new CellRangeAddress(1, sheetLastRow-1, yColumn, yColumn));
 
                         XDDFChartData.Series series1 = data.addSeries(xs, ys);
-                        series1.setTitle("2x", null); // https://stackoverflow.com/questions/21855842
+                        series1.setTitle(firstRow.getCell(yColumn).getStringCellValue(), null); // https://stackoverflow.com/questions/21855842
                     }
 
                     chart.plot(data);
@@ -607,7 +622,7 @@ class SqlReportEngine {
                     tableDataHasData = true
                 }
 
-                log.info "Report ${report.name}: mailBodyQuery DONE"
+                log.info "${logHead} mail.tableQuery DONE"
 
                 htmlDataTable = """\
                 |
@@ -622,7 +637,8 @@ class SqlReportEngine {
                 |
                 """.stripMargin()
 
-                log.info htmlDataTable
+                // TODO log trace
+                log.info "${logHead} ${htmlDataTable}"
             }
 
             // Replace placeholders
@@ -666,7 +682,7 @@ class SqlReportEngine {
 
                 def f = new File(pathname)
                 f.write(mailBody, charsetName)
-                log.info "Written file: $pathname"
+                log.info "${logHead}Written file: $pathname"
             }
 
             if(wb) {
@@ -681,7 +697,7 @@ class SqlReportEngine {
                     (wb as SXSSFWorkbook).dispose()
                 }
 
-                log.info "Written file: $filePathname"
+                log.info "${logHead}Written file: $filePathname"
             }
         }
 
@@ -754,7 +770,7 @@ class SqlReportEngine {
                 // Set the Multipart's to be the email's content
                 message.setContent(multipart)
                 Transport.send(message)
-                log.info("Mail sent")
+                log.info("${logHead}Mail sent")
 
             } catch (MessagingException e) {
                 throw new SqlReportException("Send mail failed", e)
