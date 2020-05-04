@@ -88,10 +88,11 @@ public class AxelRitcherBarChart {
             ctBarSer.addNewIdx().setVal(r-2);
             CTAxDataSource cttAxDataSource = ctBarSer.addNewCat();
             ctStrRef = cttAxDataSource.addNewStrRef();
-            // ctStrRef.setF("Sheet1!$B$1:$D$1");
 
+            // ctStrRef.setF("Sheet1!$B$1:$D$1");
             // Add
             ctStrRef.setF("Sheet1!$B$1:$G$1");
+
             CTNumDataSource ctNumDataSource = ctBarSer.addNewVal();
             CTNumRef ctNumRef = ctNumDataSource.addNewNumRef();
             ctNumRef.setF("Sheet1!$B$" + r + ":$G$" + r);
