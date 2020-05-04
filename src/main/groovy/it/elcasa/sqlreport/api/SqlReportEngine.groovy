@@ -24,6 +24,7 @@ import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xddf.usermodel.PresetColor
 import org.apache.poi.xddf.usermodel.XDDFColor
+import org.apache.poi.xddf.usermodel.XDDFLineProperties
 import org.apache.poi.xddf.usermodel.XDDFShapeProperties
 import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties
 import org.apache.poi.xddf.usermodel.chart.AxisCrosses
@@ -32,12 +33,14 @@ import org.apache.poi.xddf.usermodel.chart.BarDirection
 import org.apache.poi.xddf.usermodel.chart.BarGrouping
 import org.apache.poi.xddf.usermodel.chart.ChartTypes
 import org.apache.poi.xddf.usermodel.chart.LegendPosition
+import org.apache.poi.xddf.usermodel.chart.MarkerStyle
 import org.apache.poi.xddf.usermodel.chart.XDDFBarChartData
 import org.apache.poi.xddf.usermodel.chart.XDDFCategoryAxis
 import org.apache.poi.xddf.usermodel.chart.XDDFChartData
 import org.apache.poi.xddf.usermodel.chart.XDDFChartLegend
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSource
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSourcesFactory
+import org.apache.poi.xddf.usermodel.chart.XDDFLineChartData
 import org.apache.poi.xddf.usermodel.chart.XDDFNumericalDataSource
 import org.apache.poi.xddf.usermodel.chart.XDDFValueAxis
 import org.apache.poi.xssf.streaming.SXSSFSheet
@@ -391,31 +394,7 @@ class SqlReportEngine {
                 ConfigWorkbookChart chartConfig = workbookConfig.chart
                 XSSFSheet chartSheet = sheet as XSSFSheet
                 def firstRow = chartSheet.getRow(0)
-
-                // Columns to show in chart
-                // TODO
-                int xAxisColumn = 0
-                int[] yAxisColumnList = [1,2]
                 int sheetLastRow = sheet.getPhysicalNumberOfRows()
-
-                /*
-                XSSFSheet chartSheet = wb.createSheet("barchart") as XSSFSheet
-
-                final int NUM_OF_ROWS = 3;
-                final int NUM_OF_COLUMNS = 10;
-
-                // Create a row and put some cells in it. Rows are 0 based.
-                Row row;
-                Cell cell;
-                for (int rowIndex = 0; rowIndex < NUM_OF_ROWS; rowIndex++) {
-                    row = chartSheet.createRow((short) rowIndex);
-                    for (int colIndex = 0; colIndex < NUM_OF_COLUMNS; colIndex++) {
-                        cell = row.createCell((short) colIndex);
-                        cell.setCellValue((colIndex * (rowIndex + 1.0)) as int);
-                    }
-                }
-
-                */
 
                 // TODO graph size
                 // https://stackoverflow.com/questions/12939375/how-to-resize-a-chart-using-xssf-apache-poi-3-8
@@ -452,19 +431,19 @@ class SqlReportEngine {
                 // TODO ... plot area too small, and drawing area too
                 anchor.anchorType = ClientAnchor.AnchorType.MOVE_DONT_RESIZE
 
-                XSSFChart chart = drawing.createChart(anchor);
-                chart.setTitleText(chartConfig.titleText);
-                chart.setTitleOverlay(false);
+                XSSFChart xssfChart = drawing.createChart(anchor);
+                xssfChart.setTitleText(chartConfig.titleText);
+                xssfChart.setTitleOverlay(false);
 
-                XDDFChartLegend legend = chart.getOrAddLegend();
+                XDDFChartLegend legend = xssfChart.getOrAddLegend();
                 legend.setPosition(LegendPosition.TOP_RIGHT);
 
                 // Use a category axis for the bottom axis.
-                XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
-                bottomAxis.setTitle(firstRow.getCell(chartConfig.xAxisColumn).getStringCellValue()); // https://stackoverflow.com/questions/32010765
-                XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
-                leftAxis.setTitle("f(x)");
-                leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
+                XDDFCategoryAxis xAxis = xssfChart.createCategoryAxis(AxisPosition.BOTTOM);
+                xAxis.setTitle(firstRow.getCell(chartConfig.xAxisColumn).getStringCellValue()); // https://stackoverflow.com/questions/32010765
+                XDDFValueAxis yAxis = xssfChart.createValueAxis(AxisPosition.LEFT);
+                yAxis.setTitle("f(x)");
+                yAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
                 XDDFDataSource<?> xs = null
                 if(workbookConfig.chart.xAxisNumerical){
@@ -475,32 +454,42 @@ class SqlReportEngine {
                             new CellRangeAddress(1, sheetLastRow-1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
                 }
 
-                if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
-
-                    XDDFChartData data = chart.createData(ChartTypes.BAR, bottomAxis, leftAxis);
-
-                    chartConfig.yAxisColumns.each { yColumn ->
-                        XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                                new CellRangeAddress(1, sheetLastRow-1, yColumn, yColumn));
-
-                        XDDFChartData.Series series1 = data.addSeries(xs, ys);
-                        series1.setTitle(firstRow.getCell(yColumn).getStringCellValue(), null); // https://stackoverflow.com/questions/21855842
-                    }
-
-                    chart.plot(data);
-
-                    // in order to transform a bar chart into a column chart, you just need to change the bar direction
-                    XDDFBarChartData bar = (XDDFBarChartData) data;
-                    bar.setBarDirection(BarDirection.BAR);
+                XDDFChartData chartData = null
+                if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
+                    chartData = xssfChart.createData(ChartTypes.LINE, xAxis, yAxis)
+                    // chartData.setVaryColors(true)
+                } else if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
+                    chartData = xssfChart.createData(ChartTypes.BAR, xAxis, yAxis)
+                    // TODO parameter direction
+                    // to transform a bar chart into a column chart, you just need to change the bar direction
+                    //XDDFBarChartData barChartData = (XDDFBarChartData) chartData
+                    //barChartData.setBarDirection(BarDirection.BAR)
                     // reverse axis
-                    //bar.setBarDirection(BarDirection.COL);
+                    //barChartData.setBarDirection(BarDirection.COL);
                     // looking for "Stacked Bar Chart"? uncomment the following line
-                    //bar.setBarGrouping(BarGrouping.STACKED);
-
-//                    solidFillSeries(data, 0, PresetColor.CHARTREUSE);
-//                    solidFillSeries(data, 1, PresetColor.TURQUOISE);
+                    //barChartData.setBarGrouping(BarGrouping.STACKED);
                 }
 
+                chartConfig.yAxisColumns.each { yColumn ->
+                    XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                            new CellRangeAddress(1, sheetLastRow-1, yColumn, yColumn));
+
+                    XDDFChartData.Series series = chartData.addSeries(xs, ys);
+                    series.setTitle(firstRow.getCell(yColumn).getStringCellValue(), null); // https://stackoverflow.com/questions/21855842
+
+                    if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
+                        //solidLineSeries(series) // ??
+
+                        // series.setSmooth(false); // https://stackoverflow.com/questions/29014848
+                        // series.setMarkerStyle(MarkerStyle.STAR); // https://stackoverflow.com/questions/39636138
+                        // series.setMarkerSize((short) 6);
+                    } else if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
+                        //solidFillSeries(series) // ??
+                    }
+
+                }
+
+                xssfChart.plot(chartData);
             }
         }
 
@@ -789,6 +778,52 @@ class SqlReportEngine {
 
         InternetAddress[] array = internetAddressList as InternetAddress[]
         return array
+    }
+
+    private static void solidLineSeries(XDDFChartData.Series series) {
+        XDDFSolidFillProperties fill = new XDDFSolidFillProperties();
+        XDDFLineProperties line = new XDDFLineProperties();
+        line.setFillProperties(fill);
+        XDDFShapeProperties properties = series.getShapeProperties();
+        if (properties == null) {
+            properties = new XDDFShapeProperties();
+        }
+        properties.setLineProperties(line);
+        series.setShapeProperties(properties);
+    }
+
+    private static void solidLineSeries(XDDFChartData data, int index, PresetColor color) {
+        XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(color));
+        XDDFLineProperties line = new XDDFLineProperties();
+        line.setFillProperties(fill);
+        XDDFChartData.Series series = data.getSeries(index);
+        XDDFShapeProperties properties = series.getShapeProperties();
+        if (properties == null) {
+            properties = new XDDFShapeProperties();
+        }
+        properties.setLineProperties(line);
+        series.setShapeProperties(properties);
+    }
+
+    private static void solidFillSeries(XDDFChartData.Series series) {
+        XDDFSolidFillProperties fill = new XDDFSolidFillProperties();
+        XDDFShapeProperties properties = series.getShapeProperties();
+        if (properties == null) {
+            properties = new XDDFShapeProperties();
+        }
+        properties.setFillProperties(fill);
+        series.setShapeProperties(properties);
+    }
+
+    private static void solidFillSeries(XDDFChartData data, int index, PresetColor color) {
+        XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(color));
+        XDDFChartData.Series series = data.getSeries().get(index);
+        XDDFShapeProperties properties = series.getShapeProperties();
+        if (properties == null) {
+            properties = new XDDFShapeProperties();
+        }
+        properties.setFillProperties(fill);
+        series.setShapeProperties(properties);
     }
 
 }
