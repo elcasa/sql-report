@@ -11,5 +11,6 @@ class ConfigWorkbookChart {
     Integer xAxisColumn
     Boolean xAxisNumerical
     List<Integer> yAxisColumns
+    Boolean invertAxis
 
 }
