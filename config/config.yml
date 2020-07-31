@@ -72,6 +72,7 @@ reports:
             x-axis-column: 0
             x-axis-numerical: false
             y-axis-columns: [1,2]
+            invert-axis: true
       mail:
         subject: Report – Top 8 F1 Poleman
         heading: Here's the list of top F1 polemans

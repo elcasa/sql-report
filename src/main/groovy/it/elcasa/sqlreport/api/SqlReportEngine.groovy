@@ -30,17 +30,14 @@ import org.apache.poi.xddf.usermodel.XDDFSolidFillProperties
 import org.apache.poi.xddf.usermodel.chart.AxisCrosses
 import org.apache.poi.xddf.usermodel.chart.AxisPosition
 import org.apache.poi.xddf.usermodel.chart.BarDirection
-import org.apache.poi.xddf.usermodel.chart.BarGrouping
 import org.apache.poi.xddf.usermodel.chart.ChartTypes
 import org.apache.poi.xddf.usermodel.chart.LegendPosition
-import org.apache.poi.xddf.usermodel.chart.MarkerStyle
 import org.apache.poi.xddf.usermodel.chart.XDDFBarChartData
 import org.apache.poi.xddf.usermodel.chart.XDDFCategoryAxis
 import org.apache.poi.xddf.usermodel.chart.XDDFChartData
 import org.apache.poi.xddf.usermodel.chart.XDDFChartLegend
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSource
 import org.apache.poi.xddf.usermodel.chart.XDDFDataSourcesFactory
-import org.apache.poi.xddf.usermodel.chart.XDDFLineChartData
 import org.apache.poi.xddf.usermodel.chart.XDDFNumericalDataSource
 import org.apache.poi.xddf.usermodel.chart.XDDFValueAxis
 import org.apache.poi.xssf.streaming.SXSSFSheet
@@ -49,10 +46,7 @@ import org.apache.poi.xssf.usermodel.XSSFChart
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor
 import org.apache.poi.xssf.usermodel.XSSFDrawing
 import org.apache.poi.xssf.usermodel.XSSFFont
-import org.apache.poi.xssf.usermodel.XSSFRow
 import org.apache.poi.xssf.usermodel.XSSFSheet
-import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTMarker
-import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTTwoCellAnchor
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.ApplicationArguments
 import org.springframework.stereotype.Component
@@ -267,8 +261,8 @@ class SqlReportEngine {
          // "org.hsqldb.jdbc.JDBCDriver"
         def sql = new Sql(sampleDbConn)
 
-        boolean tableDataHasData = false
-        boolean workbookHasData = false
+        boolean tableDataEmpty = true
+        boolean workbookEmpty = true
 
         ////////////////////////
         // Create Workbook
@@ -309,8 +303,8 @@ class SqlReportEngine {
                         }
                     },
                     { row ->
-                        if(!workbookHasData){
-                            workbookHasData = true
+                        if(workbookEmpty){
+                            workbookEmpty = false
                         }
 
                         // Query row: set values in report
@@ -396,7 +390,7 @@ class SqlReportEngine {
                 def firstRow = chartSheet.getRow(0)
                 int sheetLastRow = sheet.getPhysicalNumberOfRows()
 
-                // TODO graph size
+                // TODO test graph size
                 // https://stackoverflow.com/questions/12939375/how-to-resize-a-chart-using-xssf-apache-poi-3-8
                 /*
                 //Call the partiarch to start drawing
@@ -432,64 +426,70 @@ class SqlReportEngine {
                 anchor.anchorType = ClientAnchor.AnchorType.MOVE_DONT_RESIZE
 
                 XSSFChart xssfChart = drawing.createChart(anchor);
-                xssfChart.setTitleText(chartConfig.titleText);
-                xssfChart.setTitleOverlay(false);
 
-                XDDFChartLegend legend = xssfChart.getOrAddLegend();
-                legend.setPosition(LegendPosition.TOP_RIGHT);
+                if (workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
+                    // TODO AxelRitcher version
+                } else if (workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
+                    xssfChart.setTitleText(chartConfig.titleText);
+                    xssfChart.setTitleOverlay(false);
 
-                // Use a category axis for the bottom axis.
-                XDDFCategoryAxis xAxis = xssfChart.createCategoryAxis(AxisPosition.BOTTOM);
-                xAxis.setTitle(firstRow.getCell(chartConfig.xAxisColumn).getStringCellValue()); // https://stackoverflow.com/questions/32010765
-                XDDFValueAxis yAxis = xssfChart.createValueAxis(AxisPosition.LEFT);
-                yAxis.setTitle("f(x)");
-                yAxis.setCrosses(AxisCrosses.AUTO_ZERO);
+                    XDDFChartLegend legend = xssfChart.getOrAddLegend();
+                    legend.setPosition(LegendPosition.TOP_RIGHT);
 
-                XDDFDataSource<?> xs = null
-                if(workbookConfig.chart.xAxisNumerical){
-                    xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                            new CellRangeAddress(1, sheetLastRow-1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
-                } else {
-                    xs = XDDFDataSourcesFactory.fromStringCellRange(chartSheet,
-                            new CellRangeAddress(1, sheetLastRow-1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
-                }
+                    // Use a category axis for the bottom axis.
+                    XDDFCategoryAxis xAxis = xssfChart.createCategoryAxis(AxisPosition.BOTTOM);
+                    xAxis.setTitle(firstRow.getCell(chartConfig.xAxisColumn).getStringCellValue());
+                    // https://stackoverflow.com/questions/32010765
+                    XDDFValueAxis yAxis = xssfChart.createValueAxis(AxisPosition.LEFT);
+                    yAxis.setTitle("f(x)");
+                    yAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
-                XDDFChartData chartData = null
-                if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
-                    chartData = xssfChart.createData(ChartTypes.LINE, xAxis, yAxis)
-                    // chartData.setVaryColors(true)
-                } else if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
-                    chartData = xssfChart.createData(ChartTypes.BAR, xAxis, yAxis)
-                    // TODO parameter direction
-                    // to transform a bar chart into a column chart, you just need to change the bar direction
-                    //XDDFBarChartData barChartData = (XDDFBarChartData) chartData
-                    //barChartData.setBarDirection(BarDirection.BAR)
-                    // reverse axis
-                    //barChartData.setBarDirection(BarDirection.COL);
-                    // looking for "Stacked Bar Chart"? uncomment the following line
-                    //barChartData.setBarGrouping(BarGrouping.STACKED);
-                }
-
-                chartConfig.yAxisColumns.each { yColumn ->
-                    XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
-                            new CellRangeAddress(1, sheetLastRow-1, yColumn, yColumn));
-
-                    XDDFChartData.Series series = chartData.addSeries(xs, ys);
-                    series.setTitle(firstRow.getCell(yColumn).getStringCellValue(), null); // https://stackoverflow.com/questions/21855842
-
-                    if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
-                        //solidLineSeries(series) // ??
-
-                        // series.setSmooth(false); // https://stackoverflow.com/questions/29014848
-                        // series.setMarkerStyle(MarkerStyle.STAR); // https://stackoverflow.com/questions/39636138
-                        // series.setMarkerSize((short) 6);
-                    } else if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
-                        //solidFillSeries(series) // ??
+                    XDDFDataSource<?> xs = null
+                    if (workbookConfig.chart.xAxisNumerical) {
+                        xs = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                                new CellRangeAddress(1, sheetLastRow - 1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
+                    } else {
+                        xs = XDDFDataSourcesFactory.fromStringCellRange(chartSheet,
+                                new CellRangeAddress(1, sheetLastRow - 1, chartConfig.xAxisColumn, chartConfig.xAxisColumn))
                     }
 
-                }
+                    XDDFChartData chartData = null
+                    if (workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
+                        chartData = xssfChart.createData(ChartTypes.LINE, xAxis, yAxis)
+                        // chartData.setVaryColors(true)
+                    }
+                    /*
+                    // XSSF standard Bar Chart doesn't work well
+                    else if(workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.BAR_CHART) {
+                        chartData = xssfChart.createData(ChartTypes.BAR, xAxis, yAxis)
 
-                xssfChart.plot(chartData);
+                        if(chartConfig.invertAxis){
+                            XDDFBarChartData barChartData = (XDDFBarChartData) chartData
+                            barChartData.setBarDirection(BarDirection.COL);
+                        }
+                        // looking for "Stacked Bar Chart"? uncomment the following line
+                        //barChartData.setBarGrouping(BarGrouping.STACKED);
+                    }
+                    */
+
+                    chartConfig.yAxisColumns.each { yColumn ->
+                        XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(chartSheet,
+                                new CellRangeAddress(1, sheetLastRow - 1, yColumn, yColumn));
+
+                        XDDFChartData.Series series = chartData.addSeries(xs, ys);
+                        series.setTitle(firstRow.getCell(yColumn).getStringCellValue(), null); // https://stackoverflow.com/questions/21855842
+
+                        if (workbookConfig.chart.chartTypeEnum == ReportChartTypeEnum.LINE_CHART) {
+                            //solidLineSeries(series) // ??
+
+                            // series.setSmooth(false); // https://stackoverflow.com/questions/29014848
+                            // series.setMarkerStyle(MarkerStyle.STAR); // https://stackoverflow.com/questions/39636138
+                            // series.setMarkerSize((short) 6);
+                        }
+                    }
+
+                    xssfChart.plot(chartData);
+                }
             }
         }
 
@@ -608,7 +608,7 @@ class SqlReportEngine {
                     })
 
                 if(tableData){
-                    tableDataHasData = true
+                    tableDataEmpty = false
                 }
 
                 log.info "${logHead} mail.tableQuery DONE"
@@ -655,7 +655,7 @@ class SqlReportEngine {
         String mailBodyFilename = baseFileName + timestamp + Constants.REPORT_MAILBODY_FILENAME_EXTENSION
         String reportAttachmentName = baseFileName + timestamp + Constants.REPORT_ATTACHMENT_FILENAME_EXTENSION
 
-        if(!tableDataHasData && !workbookHasData){
+        if(tableDataEmpty && workbookEmpty){
             throw new SqlReportException("No data found! Check queries or report configuration")
         }
 
