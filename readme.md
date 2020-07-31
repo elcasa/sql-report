@@ -60,9 +60,12 @@ command to run if program contains helper info
 * migliorare template mail html mail no reply ricevute
     * fare anche un esempio con un immagine
 * grafici excel!!
-    * sistema dimensione chart
-    * vengono tagliate la prima e l'ultima barra
+    * sistema dimensione chart, prova versione roytus
+    * vengono tagliate la prima e l'ultima barra, prova versione roytus
     * crea line-chart
+* stampare come log trace la configurazione in json
+    * sia del signolo report
+    * che del config
 * file CSV con openCSV
 * converti fine riga in lf?
 * loggare su file
